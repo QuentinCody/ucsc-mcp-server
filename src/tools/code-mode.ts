@@ -27,6 +27,8 @@ export function registerCodeMode(server: McpServer, env: CodeModeEnv): void {
 
     const executeTool = createExecuteTool({
         prefix: "ucsc",
+        // Verifiable provenance: ucsc_execute results carry a _meta.citation.
+        source: { id: "ucsc", name: "UCSC Genome Browser", url: "https://genome.ucsc.edu" },
         catalog: ucscCatalog,
         apiFetch,
         doNamespace: env.UCSC_DATA_DO,
