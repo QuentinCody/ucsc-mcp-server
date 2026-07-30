@@ -103,7 +103,7 @@ if (index) {
   assertContains('src/index.ts', index, 'UcscDataDO', 'index exports UcscDataDO');
   assertContains('src/index.ts', index, 'export { UcscDataDO }', 'index re-exports DO for wrangler');
   assertContains('src/index.ts', index, 'MyMCP', 'index declares MyMCP agent class');
-  assertContains('src/index.ts', index, 'McpAgent', 'index uses McpAgent');
+  assertContains('src/index.ts', index, 'StatelessMcpWorker', 'index uses StatelessMcpWorker');
   assertContains('src/index.ts', index, '"ucsc"', 'index uses ucsc server name');
   assertContains('src/index.ts', index, '/health', 'index serves /health endpoint');
   assertContains('src/index.ts', index, '/mcp', 'index serves /mcp endpoint');
@@ -189,7 +189,7 @@ if (wrangler) {
   assertContains('wrangler.jsonc', wrangler, '"ucsc-mcp-server"', 'wrangler worker name is ucsc-mcp-server');
   assertContains('wrangler.jsonc', wrangler, '"UcscDataDO"', 'wrangler references UcscDataDO class');
   assertContains('wrangler.jsonc', wrangler, '"UCSC_DATA_DO"', 'wrangler binds UCSC_DATA_DO');
-  assertContains('wrangler.jsonc', wrangler, '"MyMCP"', 'wrangler lists MyMCP class');
+  assertContains('wrangler.jsonc', wrangler, '"mcp-2026-07-28-stateless"', 'wrangler deletes the retired transport class');
   assertContains('wrangler.jsonc', wrangler, 'CODE_MODE_LOADER', 'wrangler declares CODE_MODE_LOADER binding');
   assertContains('wrangler.jsonc', wrangler, '"nodejs_compat"', 'wrangler sets nodejs_compat flag');
   assertContains('wrangler.jsonc', wrangler, './src/ai-stub.ts', 'wrangler aliases ai to ai-stub');
@@ -200,8 +200,8 @@ if (wrangler) {
 if (pkg) {
   assertContains('package.json', pkg, '"ucsc-mcp-server"', 'package name is ucsc-mcp-server');
   assertContains('package.json', pkg, '"@bio-mcp/shared": "workspace:*"', 'package depends on @bio-mcp/shared workspace');
-  assertContains('package.json', pkg, '"@modelcontextprotocol/sdk": "1.26.0"', 'MCP SDK pinned to 1.26.0');
-  assertContains('package.json', pkg, '"agents": "^0.7.6"', 'agents pinned to >=0.7.6');
+  assertContains('package.json', pkg, '"@modelcontextprotocol/server": "2.0.0"', 'MCP server SDK pinned to 2.0.0');
+  assertContains('package.json', pkg, '"agents": "0.20.1"', 'agents pinned to 0.20.1');
   assertContains('package.json', pkg, '--port 8894', 'dev script uses port 8894');
 }
 
