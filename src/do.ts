@@ -8,7 +8,7 @@ import type { SchemaHints } from "@bio-mcp/shared/staging/schema-inference";
  * - /list/ucscGenomes → assemblies (keyed map under "ucscGenomes")
  * - /list/tracks      → tracks      (keyed map under the genome db name)
  * - /list/chromosomes → chromosomes (keyed map under "chromosomes")
- * - /list/schema      → schema      (nested under "fields")
+ * - /list/schema      → schema_fields (native "columnTypes")
  * - /getData/track    → track_rows  (itemsReturned under a track-named key)
  * - /getData/sequence → sequence    (single row)
  * - /search           → search_matches (flattened out of positionMatches[].matches[])
@@ -18,6 +18,19 @@ import type { SchemaHints } from "@bio-mcp/shared/staging/schema-inference";
  * defaults. Hints below only nudge table naming + indexing.
  */
 export class UcscDataDO extends RestStagingDO {
+    protected getTabularData(value: unknown): unknown {
+        const record = (data: unknown): data is Record<string, unknown> => data !== null && typeof data === "object" && !Array.isArray(data);
+        const data = record(value) && Array.isArray(value.content) && record(value.structuredContent) && "data" in value.structuredContent
+            ? value.structuredContent.data : value;
+        if (!record(data)) return data;
+        // The original payload is retained independently by RestStagingDO.
+        if (typeof data.sql === "string" && Array.isArray(data.rows)) {
+            return { query_rows: data.rows.map((native, row_index) => ({ row_index, native_json: JSON.stringify(native) })) };
+        }
+        if (typeof data.dna === "string" && typeof data.chrom === "string") return { sequence: [data] };
+        return data;
+    }
+
     protected getSchemaHints(data: unknown): SchemaHints | undefined {
         if (!data || typeof data !== "object") return undefined;
 
@@ -39,8 +52,8 @@ export class UcscDataDO extends RestStagingDO {
             };
         }
 
-        // /list/schema → { genome, track, fields: [ { name, sqlType, ... } ] }
-        if (Array.isArray(obj.fields)) {
+        // Native /list/schema uses columnTypes; keep legacy fields compatible.
+        if (Array.isArray(obj.columnTypes) || Array.isArray(obj.fields)) {
             return {
                 tableName: "schema_fields",
                 indexes: ["name", "sqlType"],

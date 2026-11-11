@@ -1,46 +1,36 @@
-/**
- * UCSC API adapter — wraps ucscFetch into the ApiFetchFn interface
- * for use by the Code Mode __api_proxy tool.
- *
- * UCSC REST returns JSON for all documented endpoints; no special
- * content-type switching needed. Upstream enforces 10,000 hits/day/IP.
- */
-
 import type { ApiFetchFn } from "@bio-mcp/shared/codemode/catalog";
-import { ucscFetch } from "./http";
+import { ucscFetch, rejectUcscResponse } from "./http";
+import { ucscRequest } from "./request";
+import { ucscCompleteness } from "./completeness";
+import { commercialUcscFetch } from "./commercial-profile";
 
 export function createUcscApiFetch(): ApiFetchFn {
-    return async (request) => {
-        const response = await ucscFetch(
-            request.path,
-            request.params as Record<string, unknown>,
-        );
+  const readUcsc = createUcscRead();
+  // License audit 2026-11-10: a reselling caller gets no restricted track and
+  // no liftOver chain data (see ./commercial-profile). No change for each other caller.
+  return request => (request.licenseProfile === "commercial" ? commercialUcscFetch(request, readUcsc) : readUcsc(request));
+}
 
-        if (!response.ok) {
-            let errorBody: string;
-            try {
-                errorBody = await response.text();
-            } catch {
-                errorBody = response.statusText;
-            }
-            const error = new Error(
-                `HTTP ${response.status}: ${errorBody.slice(0, 200)}`,
-            ) as Error & {
-                status: number;
-                data: unknown;
-            };
-            error.status = response.status;
-            error.data = errorBody;
-            throw error;
-        }
-
-        const contentType = response.headers.get("content-type") || "";
-        if (!contentType.includes("json")) {
-            const text = await response.text();
-            return { status: response.status, data: text };
-        }
-
-        const data = await response.json();
-        return { status: response.status, data };
-    };
+function createUcscRead(): ApiFetchFn {
+  return async request => {
+    const url = ucscRequest(request);
+    const response = await ucscFetch(url.href);
+    if (request.path === "/list/files" && request.params?.format === "text") {
+      if (response.status !== 200 || /html|json/i.test(response.content_type)) rejectUcscResponse("UCSC file listing is not complete plain text", response);
+      return { status: response.status, data: response.text };
+    }
+    if (!/^application\/(?:[^;]+\+)?json(?:;|$)/i.test(response.content_type)) rejectUcscResponse("UCSC did not return JSON", response);
+    let data: Record<string, unknown>;
+    try {
+      const value: unknown = JSON.parse(response.text);
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected object");
+      data = value as Record<string, unknown>;
+    } catch { rejectUcscResponse("UCSC returned malformed JSON or a non-object response", response); }
+    if (typeof data.error === "string" && data.error) rejectUcscResponse("UCSC returned an error object", response);
+    const completeness = ucscCompleteness(data);
+    if (response.status === 206 && !(data.maxItemsLimit === true && Number.isSafeInteger(data.itemsReturned) && Number(data.itemsReturned) >= 0)) {
+      rejectUcscResponse("UCSC HTTP 206 lacks a valid native cap marker and returned-row count", response);
+    }
+    return { status: response.status, data, ...(completeness ? { completeness, upstreamTotal: null } : {}) };
+  };
 }

@@ -146,10 +146,11 @@ if (catalog) {
   assertContains('src/spec/catalog.ts', catalog, '/getData/track', 'catalog has /getData/track');
   assertContains('src/spec/catalog.ts', catalog, '/search', 'catalog has /search');
   // Rate-limit, liftover, and range-cap notes per plan §5.6
-  assertContains('src/spec/catalog.ts', catalog, '10,000 hits/day', 'catalog documents 10k/day rate limit');
+  // Current provider guide supersedes the original plan's unsupported daily cap.
+  assertContains('src/spec/catalog.ts', catalog, 'one request per second', 'catalog documents provider pacing recommendation');
   assertContains('src/spec/catalog.ts', catalog, 'liftover', 'catalog documents liftover omission');
   assertContains('src/spec/catalog.ts', catalog, '@bio-mcp/shared/variants/resolve', 'catalog routes liftover to the shared helper');
-  assertContains('src/spec/catalog.ts', catalog, '100,000', 'catalog documents 100_000 bp range cap on /getData/sequence');
+  assertContains('src/spec/catalog.ts', catalog, 'not a documented upstream hard cap', 'catalog distinguishes suggested range size from upstream limits');
   // No dead endpoints
   assertNotContains('src/spec/catalog.ts', catalog, '/liftover', 'catalog does not expose a liftover endpoint');
 }
