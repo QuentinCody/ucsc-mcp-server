@@ -1,0 +1,5 @@
+{
+	"//": "Type-check for the Cloudflare Workers Build: the shipped code only. Tests and test fixtures import vitest, which this server does not declare; under some build-image bun versions it is not hoisted, and tsc failed with TS2307 (2026-11-11). `npm run type-check` still checks the tests.",
+	"extends": "./tsconfig.json",
+	"exclude": ["src/**/*.test.ts", "src/**/staging-fixture.ts"]
+}
